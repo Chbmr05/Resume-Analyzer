@@ -1,0 +1,813 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ResumeAI Pro - Smart Career Analyzer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: { extend: { fontFamily: { 'sans': ['Inter', 'sans-serif'] } } }
+        }
+    </script>
+    <style>
+        * { font-family: 'Inter', sans-serif; }
+        .spinner { width: 48px; height: 48px; border: 4px solid rgba(99,102,241,0.15); border-top: 4px solid #6366f1; border-radius: 50%; animation: spin 0.8s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .auth-bg { background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%); background-size: 400% 400%; animation: gShift 12s ease infinite; }
+        @keyframes gShift { 0%,100%{background-position:0% 50%}50%{background-position:100% 50%} }
+        .glass { background: rgba(255,255,255,0.05); backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.1); }
+        .input-modern:focus { outline:none; border-color:#6366f1; box-shadow:0 0 0 4px rgba(99,102,241,0.1); }
+        .score-ring { animation: scoreReveal 1.5s ease-out forwards; }
+        @keyframes scoreReveal { from { stroke-dashoffset: 283; } }
+        .glow-pulse { animation: glowP 2s ease-in-out infinite; }
+        @keyframes glowP { 0%,100%{box-shadow:0 0 20px rgba(99,102,241,0.3)}50%{box-shadow:0 0 40px rgba(99,102,241,0.6)} }
+        .slide-up { animation: slideUp 0.5s ease-out forwards; opacity:0; transform:translateY(20px); }
+        @keyframes slideUp { to { opacity:1; transform:translateY(0); } }
+        .hover-lift { transition: all 0.3s ease; }
+        .hover-lift:hover { transform: translateY(-3px); box-shadow: 0 12px 40px -10px rgba(0,0,0,0.12); }
+        .tab-btn { transition: all 0.2s ease; }
+        .tab-btn.active { color: #4f46e5; border-color: #4f46e5; background: #eef2ff; }
+        .tab-btn:not(.active):hover { color: #6366f1; background: #f8fafc; }
+        .tab-content { display: none; animation: fadeIn 0.3s ease; }
+        .tab-content.active { display: block; }
+        @keyframes fadeIn { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+        .particle { position:absolute; border-radius:50%; background:rgba(99,102,241,0.08); animation:float 6s ease-in-out infinite; }
+        @keyframes float { 0%,100%{transform:translateY(0);opacity:0.3}50%{transform:translateY(-20px);opacity:0.7} }
+        .hidden { display: none !important; }
+        ::-webkit-scrollbar{width:5px}::-webkit-scrollbar-track{background:#f1f5f9}::-webkit-scrollbar-thumb{background:#c7d2fe;border-radius:3px}
+    </style>
+</head>
+<body class="bg-slate-50 min-h-screen">
+
+    <!-- ====== AUTH ====== -->
+    <div id="authSection" class="auth-bg min-h-screen flex items-center justify-center p-4 relative overflow-hidden">
+        <div class="particle w-32 h-32 top-20 left-10"></div>
+        <div class="particle w-20 h-20 top-40 right-20" style="animation-delay:2s"></div>
+        <div class="particle w-24 h-24 bottom-32 left-1/4" style="animation-delay:4s"></div>
+        <div class="particle w-16 h-16 bottom-20 right-1/3" style="animation-delay:1s"></div>
+
+        <div class="max-w-md w-full relative z-10">
+            <div class="text-center mb-10">
+                <div class="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-indigo-600 mb-6 glow-pulse">
+                    <svg class="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                </div>
+                <h1 class="text-4xl font-black text-white mb-2">Resume<span class="text-indigo-400">AI</span> Pro</h1>
+                <p class="text-slate-400 text-lg">Smart Career Analysis & Growth</p>
+            </div>
+
+            <!-- Login -->
+            <div id="loginForm" class="glass rounded-3xl p-8 slide-up">
+                <h2 class="text-2xl font-bold text-white mb-1">Welcome back</h2>
+                <p class="text-slate-400 text-sm mb-6">Sign in to analyze your resume</p>
+                <div id="authError" class="hidden mb-4 p-3 bg-red-500/20 border border-red-500/30 rounded-xl text-red-300 text-sm"></div>
+                <div class="space-y-4">
+                    <div>
+                        <label class="text-slate-400 text-xs font-semibold uppercase tracking-wider mb-1 block">Email</label>
+                        <input type="email" id="loginEmail" placeholder="you@example.com" class="input-modern w-full px-4 py-3.5 bg-white/5 border border-white/10 rounded-xl text-white placeholder-slate-500">
+                    </div>
+                    <div>
+                        <label class="text-slate-400 text-xs font-semibold uppercase tracking-wider mb-1 block">Password</label>
+                        <input type="password" id="loginPassword" placeholder="••••••••" class="input-modern w-full px-4 py-3.5 bg-white/5 border border-white/10 rounded-xl text-white placeholder-slate-500">
+                    </div>
+                    <button onclick="handleLogin()" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3.5 rounded-xl transition-all hover:shadow-lg hover:shadow-indigo-500/25 active:scale-[0.98]">Sign In →</button>
+                </div>
+                <div class="mt-6 text-center">
+                    <span class="text-slate-500 text-sm">New here? </span>
+                    <button onclick="showSignup()" class="text-indigo-400 font-semibold text-sm hover:text-indigo-300">Create account</button>
+                </div>
+            </div>
+
+            <!-- Signup -->
+            <div id="signupForm" class="hidden glass rounded-3xl p-8 slide-up">
+                <h2 class="text-2xl font-bold text-white mb-1">Create account</h2>
+                <p class="text-slate-400 text-sm mb-6">Start your career analysis journey</p>
+                <div class="space-y-4">
+                    <div>
+                        <label class="text-slate-400 text-xs font-semibold uppercase tracking-wider mb-1 block">Full Name</label>
+                        <input type="text" id="signupName" placeholder="John Doe" class="input-modern w-full px-4 py-3.5 bg-white/5 border border-white/10 rounded-xl text-white placeholder-slate-500">
+                    </div>
+                    <div>
+                        <label class="text-slate-400 text-xs font-semibold uppercase tracking-wider mb-1 block">Email</label>
+                        <input type="email" id="signupEmail" placeholder="you@example.com" class="input-modern w-full px-4 py-3.5 bg-white/5 border border-white/10 rounded-xl text-white placeholder-slate-500">
+                    </div>
+                    <div>
+                        <label class="text-slate-400 text-xs font-semibold uppercase tracking-wider mb-1 block">Password</label>
+                        <input type="password" id="signupPassword" placeholder="Min 6 characters" class="input-modern w-full px-4 py-3.5 bg-white/5 border border-white/10 rounded-xl text-white placeholder-slate-500">
+                    </div>
+                    <button onclick="handleSignup()" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3.5 rounded-xl transition-all hover:shadow-lg hover:shadow-indigo-500/25 active:scale-[0.98]">Create Account →</button>
+                </div>
+                <div class="mt-6 text-center">
+                    <span class="text-slate-500 text-sm">Have account? </span>
+                    <button onclick="showLogin()" class="text-indigo-400 font-semibold text-sm hover:text-indigo-300">Sign in</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ====== MAIN APP ====== -->
+    <div id="appSection" class="hidden">
+        <!-- Nav -->
+        <nav class="bg-white border-b border-slate-200 sticky top-0 z-50">
+            <div class="max-w-7xl mx-auto px-4 md:px-8 flex items-center justify-between h-16">
+                <div class="flex items-center gap-3">
+                    <div class="w-9 h-9 rounded-lg bg-indigo-600 flex items-center justify-center">
+                        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                    </div>
+                    <span class="font-bold text-lg text-slate-800">Resume<span class="text-indigo-600">AI</span></span>
+                </div>
+                <div class="flex items-center gap-4">
+                    <div class="flex items-center gap-2">
+                        <div class="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center">
+                            <span id="userInitial" class="text-indigo-600 font-bold text-sm"></span>
+                        </div>
+                        <span id="userName" class="text-sm font-medium text-slate-700 hidden md:block"></span>
+                    </div>
+                    <button onclick="handleLogout()" class="px-4 py-2 text-sm font-medium text-slate-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all">Logout</button>
+                </div>
+            </div>
+        </nav>
+
+        <div class="max-w-6xl mx-auto p-4 md:p-8">
+            <!-- Upload -->
+            <div class="mb-8">
+                <h1 class="text-3xl font-black text-slate-800 mb-1">Analyze Your Resume</h1>
+                <p class="text-slate-500 mb-6">Upload your resume and job description for AI-powered insights</p>
+
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 md:p-8">
+                    <div class="grid md:grid-cols-2 gap-6 mb-6">
+                        <div>
+                            <label class="text-slate-700 text-xs font-bold uppercase tracking-wider mb-2 block">Resume File</label>
+                            <label class="flex flex-col items-center justify-center w-full h-36 border-2 border-dashed border-slate-300 rounded-xl cursor-pointer bg-slate-50 hover:bg-indigo-50 hover:border-indigo-300 transition-all group">
+                                <svg class="w-8 h-8 mb-2 text-slate-400 group-hover:text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
+                                <p class="text-sm text-slate-500 group-hover:text-indigo-600"><span class="font-semibold">Click to upload</span> PDF or DOCX</p>
+                                <p id="fileName" class="text-xs text-slate-400 mt-1"></p>
+                                <input type="file" id="resumeFile" accept=".pdf,.docx" class="hidden">
+                            </label>
+                        </div>
+                        <div>
+                            <label class="text-slate-700 text-xs font-bold uppercase tracking-wider mb-2 block">Company <span class="text-slate-400 font-normal normal-case">(optional)</span></label>
+                            <input type="text" id="companyName" placeholder="e.g., Google, Amazon" class="input-modern w-full px-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 placeholder-slate-400">
+                            <p class="text-xs text-slate-400 mt-2">We'll tailor the analysis for this company</p>
+                        </div>
+                    </div>
+                    <div class="mb-6">
+                        <label class="text-slate-700 text-xs font-bold uppercase tracking-wider mb-2 block">Job Description <span class="text-red-500">*</span></label>
+                        <textarea id="jobDescription" rows="6" placeholder="Paste the complete job description here..." class="input-modern w-full px-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 placeholder-slate-400 resize-none"></textarea>
+                    </div>
+                    <div id="errorMessage" class="hidden mb-4 p-4 bg-red-50 border border-red-200 rounded-xl flex items-center gap-3">
+                        <svg class="w-5 h-5 text-red-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/></svg>
+                        <span id="errorText" class="text-red-700 text-sm font-medium"></span>
+                    </div>
+                    <button id="analyzeBtn" onclick="analyzeResume()" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-4 rounded-xl transition-all hover:shadow-xl hover:shadow-indigo-500/20 active:scale-[0.99] flex items-center justify-center gap-2 text-lg">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                        Analyze Resume
+                    </button>
+                </div>
+            </div>
+
+            <!-- Loading -->
+            <div id="loadingSection" class="hidden bg-white rounded-2xl shadow-sm border border-slate-200 p-12 text-center mb-8">
+                <div class="spinner mx-auto mb-6"></div>
+                <h3 class="text-xl font-bold text-slate-800 mb-2">Analyzing your resume...</h3>
+                <p class="text-slate-500">Matching skills, scoring profile, building learning plan</p>
+            </div>
+
+            <!-- RESULTS WITH TABS -->
+            <div id="resultsSection" class="hidden"></div>
+        </div>
+    </div>
+
+<script>
+const API_URL = 'http://localhost:5000';
+let selectedFile = null, currentUser = null, authToken = null;
+
+window.onload = checkAuth;
+
+async function checkAuth() {
+    authToken = localStorage.getItem('authToken');
+    if (!authToken) { showAuth(); return; }
+    try {
+        const r = await fetch(`${API_URL}/api/auth/me`, { headers: { 'Authorization': `Bearer ${authToken}` } });
+        if (r.ok) { currentUser = (await r.json()).user; showApp(); }
+        else { localStorage.removeItem('authToken'); showAuth(); }
+    } catch { showAuth(); }
+}
+
+function showAuth() { document.getElementById('authSection').classList.remove('hidden'); document.getElementById('appSection').classList.add('hidden'); }
+function showApp() {
+    document.getElementById('authSection').classList.add('hidden');
+    document.getElementById('appSection').classList.remove('hidden');
+    document.getElementById('userName').textContent = currentUser.name;
+    document.getElementById('userInitial').textContent = currentUser.name.charAt(0).toUpperCase();
+}
+function showLogin() { document.getElementById('loginForm').classList.remove('hidden'); document.getElementById('signupForm').classList.add('hidden'); document.getElementById('authError').classList.add('hidden'); }
+function showSignup() { document.getElementById('loginForm').classList.add('hidden'); document.getElementById('signupForm').classList.remove('hidden'); document.getElementById('authError').classList.add('hidden'); }
+function showAuthError(m) { const e=document.getElementById('authError'); e.textContent=m; e.classList.remove('hidden'); }
+
+async function handleLogin() {
+    const email=document.getElementById('loginEmail').value.trim(), pw=document.getElementById('loginPassword').value;
+    if(!email||!pw){showAuthError('Enter email and password');return;}
+    try {
+        const r=await fetch(`${API_URL}/api/auth/login`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password:pw})});
+        const d=await r.json();
+        if(r.ok){authToken=d.token;localStorage.setItem('authToken',authToken);currentUser=d.user;showApp();}else{showAuthError(d.error);}
+    }catch{showAuthError('Connection error');}
+}
+async function handleSignup() {
+    const name=document.getElementById('signupName').value.trim(),email=document.getElementById('signupEmail').value.trim(),pw=document.getElementById('signupPassword').value;
+    if(!name||!email||!pw){showAuthError('Fill all fields');return;}
+    try {
+        const r=await fetch(`${API_URL}/api/auth/signup`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,email,password:pw})});
+        const d=await r.json();
+        if(r.ok){authToken=d.token;localStorage.setItem('authToken',authToken);currentUser=d.user;showApp();}else{showAuthError(d.error);}
+    }catch{showAuthError('Connection error');}
+}
+async function handleLogout() {
+    if(authToken) fetch(`${API_URL}/api/auth/logout`,{method:'POST',headers:{'Authorization':`Bearer ${authToken}`}}).catch(()=>{});
+    localStorage.removeItem('authToken'); authToken=null; currentUser=null; showAuth();
+}
+
+document.getElementById('resumeFile').addEventListener('change',function(e){
+    selectedFile=e.target.files[0];
+    if(selectedFile){document.getElementById('fileName').textContent='✓ '+selectedFile.name;document.getElementById('fileName').className='text-xs text-indigo-600 font-semibold mt-1';}
+});
+
+async function analyzeResume() {
+    const jd=document.getElementById('jobDescription').value.trim(), cn=document.getElementById('companyName').value.trim();
+    if(!selectedFile){showError('Upload your resume');return;}
+    if(!jd||jd.length<50){showError('Paste a complete job description (min 50 chars)');return;}
+    hideError();
+    document.getElementById('loadingSection').classList.remove('hidden');
+    document.getElementById('resultsSection').classList.add('hidden');
+    const btn=document.getElementById('analyzeBtn'); btn.disabled=true; btn.innerHTML='<div class="spinner w-5 h-5 border-2 border-white/30 border-t-white"></div> Analyzing...';
+    try {
+        const fd=new FormData(); fd.append('resume',selectedFile); fd.append('jobDescription',jd); fd.append('companyName',cn);
+        const r=await fetch(`${API_URL}/api/analyze`,{method:'POST',headers:{'Authorization':`Bearer ${authToken}`},body:fd});
+        const d=await r.json();
+        if(!r.ok){if(r.status===401){alert('Session expired');handleLogout();return;}throw new Error(d.error);}
+        displayResults(d);
+    }catch(e){showError(e.message||'Analysis failed');}
+    finally{document.getElementById('loadingSection').classList.add('hidden');btn.disabled=false;btn.innerHTML='<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg> Analyze Resume';}
+}
+
+function showError(m){document.getElementById('errorText').textContent=m;document.getElementById('errorMessage').classList.remove('hidden');}
+function hideError(){document.getElementById('errorMessage').classList.add('hidden');}
+
+// ============ HELPERS ============
+function safe(v,f){if(v===undefined||v===null)return f!==undefined?f:'';return v;}
+function findResource(arr,skill){if(!Array.isArray(arr))return {};return arr.find(r=>(r.skillName||'').toLowerCase()===(skill||'').toLowerCase())||{};}
+function getScoreColor(s){
+    if(s>=80)return{bg:'bg-emerald-500',text:'text-emerald-600',light:'bg-emerald-50',ring:'#10b981'};
+    if(s>=65)return{bg:'bg-blue-500',text:'text-blue-600',light:'bg-blue-50',ring:'#3b82f6'};
+    if(s>=50)return{bg:'bg-amber-500',text:'text-amber-600',light:'bg-amber-50',ring:'#f59e0b'};
+    if(s>=35)return{bg:'bg-orange-500',text:'text-orange-600',light:'bg-orange-50',ring:'#f97316'};
+    return{bg:'bg-red-500',text:'text-red-600',light:'bg-red-50',ring:'#ef4444'};
+}
+
+// ============ TAB SWITCHING ============
+function switchTab(tabName) {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    document.getElementById('tab-btn-' + tabName).classList.add('active');
+    document.getElementById('tab-' + tabName).classList.add('active');
+}
+
+// ============ DISPLAY RESULTS ============
+function displayResults(data) {
+    const section = document.getElementById('resultsSection');
+    section.innerHTML = '';
+    console.log('Analysis:', data);
+
+    const missing = safe(data.missingSkills,[]);
+    const matched = safe(data.matchedSkills,[]);
+    const jobReqs = safe(data.jobRequirements,[]);
+    const strengths = safe(data.strengths,[]);
+    const weaknesses = safe(data.weaknesses,[]);
+    const gapArr = safe(data.skillGapAnalysis,[]);
+    const resArr = safe(data.learningResources,[]);
+    const score = safe(data.overallScore,0);
+    const company = safe(data.companyName,'');
+    const fit = safe(data.fitAnalysis,'');
+    const tips = safe(data.interviewTips,[]);
+    const plan = safe(data.overallLearningPlan,{});
+    const bd = safe(data.scoreBreakdown,{});
+    const rec = safe(data.hiringRecommendation,'');
+    const recR = safe(data.recommendationReason,'');
+    const expL = safe(data.experienceLevel,'');
+    const isPerfect = missing.length===0;
+    const colors = getScoreColor(score);
+    const circ = 2*Math.PI*45;
+    const dash = circ-(score/100)*circ;
+
+    // Count badges for tabs
+    const missingCount = missing.length;
+    const matchedCount = matched.length;
+
+    section.innerHTML = `
+    <!-- SCORE HERO (always visible above tabs) -->
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden mb-6 slide-up">
+        <div class="p-6 md:p-8">
+            <div class="flex flex-col lg:flex-row items-center gap-8">
+                <div class="relative flex-shrink-0">
+                    <svg width="150" height="150" class="transform -rotate-90">
+                        <circle cx="75" cy="75" r="45" stroke="#e2e8f0" stroke-width="8" fill="none"/>
+                        <circle cx="75" cy="75" r="45" stroke="${colors.ring}" stroke-width="8" fill="none"
+                            stroke-dasharray="${circ}" stroke-dashoffset="${dash}" stroke-linecap="round" class="score-ring"/>
+                    </svg>
+                    <div class="absolute inset-0 flex flex-col items-center justify-center">
+                        <span class="text-4xl font-black text-slate-800">${score}</span>
+                        <span class="text-xs font-semibold text-slate-400 uppercase">Score</span>
+                    </div>
+                </div>
+                <div class="flex-1 text-center lg:text-left">
+                    ${company?`<span class="inline-block px-3 py-1 rounded-full text-xs font-bold bg-indigo-100 text-indigo-700 mb-3">${company}</span>`:''}
+                    <h2 class="text-2xl font-black text-slate-800 mb-2">
+                        ${isPerfect?'🎉 Perfect Match!':score>=80?'⭐ Excellent Match!':score>=65?'💪 Good Match!':score>=50?'👍 Decent Fit':'📚 Growth Opportunity'}
+                    </h2>
+                    <p class="text-slate-500 text-sm mb-4">${fit}</p>
+                    <div class="flex flex-wrap gap-2 justify-center lg:justify-start">
+                        <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg ${colors.light} ${colors.text} text-sm font-semibold">
+                            <span class="w-2 h-2 rounded-full ${colors.bg}"></span>${rec}
+                        </span>
+                        <span class="inline-flex items-center px-3 py-1.5 rounded-lg bg-slate-100 text-slate-600 text-sm font-semibold">${matchedCount}/${jobReqs.length} skills</span>
+                        ${expL?`<span class="inline-flex items-center px-3 py-1.5 rounded-lg bg-purple-50 text-purple-600 text-sm font-semibold">${expL}</span>`:''}
+                    </div>
+                </div>
+            </div>
+        </div>
+        ${Object.keys(bd).length>0?`
+        <div class="border-t border-slate-100 px-6 md:px-8 py-5 bg-slate-50/50">
+            <div class="flex items-center justify-between mb-4">
+                <h4 class="text-sm font-bold text-slate-700">Score Breakdown</h4>
+                <span class="text-xs text-slate-400">Total: ${score}/100</span>
+            </div>
+            <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+                ${bd.skillMatch!==undefined?`
+                <div class="p-3 rounded-xl bg-white border border-slate-200">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-xs font-semibold text-slate-600">🎯 Skill Match</span>
+                        <span class="text-xs font-bold text-indigo-600">${Math.round(safe(bd.skillMatch,0))}/${safe(bd.skillMatchMax,40)}</span>
+                    </div>
+                    <div class="w-full bg-slate-100 rounded-full h-2">
+                        <div class="bg-indigo-500 h-2 rounded-full transition-all" style="width:${Math.min((safe(bd.skillMatch,0)/safe(bd.skillMatchMax,40))*100,100)}%"></div>
+                    </div>
+                    <p class="text-xs text-slate-400 mt-1">Direct matches with required skills</p>
+                </div>`:''}
+                ${bd.relatedSkills!==undefined?`
+                <div class="p-3 rounded-xl bg-white border border-slate-200">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-xs font-semibold text-slate-600">🔗 Related Skills</span>
+                        <span class="text-xs font-bold text-purple-600">${Math.round(safe(bd.relatedSkills,0))}/${safe(bd.relatedSkillsMax,15)}</span>
+                    </div>
+                    <div class="w-full bg-slate-100 rounded-full h-2">
+                        <div class="bg-purple-500 h-2 rounded-full transition-all" style="width:${Math.min((safe(bd.relatedSkills,0)/safe(bd.relatedSkillsMax,15))*100,100)}%"></div>
+                    </div>
+                    <p class="text-xs text-slate-400 mt-1">Transferable similar skills bonus</p>
+                </div>`:''}
+                ${bd.keywordOverlap!==undefined?`
+                <div class="p-3 rounded-xl bg-white border border-slate-200">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-xs font-semibold text-slate-600">📝 Keywords</span>
+                        <span class="text-xs font-bold text-blue-600">${Math.round(safe(bd.keywordOverlap,0))}/${safe(bd.keywordOverlapMax,15)}</span>
+                    </div>
+                    <div class="w-full bg-slate-100 rounded-full h-2">
+                        <div class="bg-blue-500 h-2 rounded-full transition-all" style="width:${Math.min((safe(bd.keywordOverlap,0)/safe(bd.keywordOverlapMax,15))*100,100)}%"></div>
+                    </div>
+                    <p class="text-xs text-slate-400 mt-1">Job keywords found in resume</p>
+                </div>`:''}
+                ${bd.experience!==undefined?`
+                <div class="p-3 rounded-xl bg-white border border-slate-200">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-xs font-semibold text-slate-600">💼 Experience</span>
+                        <span class="text-xs font-bold text-emerald-600">${safe(bd.experience,0)}/${safe(bd.experienceMax,15)}</span>
+                    </div>
+                    <div class="w-full bg-slate-100 rounded-full h-2">
+                        <div class="bg-emerald-500 h-2 rounded-full transition-all" style="width:${Math.min((safe(bd.experience,0)/safe(bd.experienceMax,15))*100,100)}%"></div>
+                    </div>
+                    <p class="text-xs text-slate-400 mt-1">Years of work experience</p>
+                </div>`:''}
+                ${bd.education!==undefined?`
+                <div class="p-3 rounded-xl bg-white border border-slate-200">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-xs font-semibold text-slate-600">🎓 Education</span>
+                        <span class="text-xs font-bold text-amber-600">${safe(bd.education,0)}/${safe(bd.educationMax,10)}</span>
+                    </div>
+                    <div class="w-full bg-slate-100 rounded-full h-2">
+                        <div class="bg-amber-500 h-2 rounded-full transition-all" style="width:${Math.min((safe(bd.education,0)/safe(bd.educationMax,10))*100,100)}%"></div>
+                    </div>
+                    <p class="text-xs text-slate-400 mt-1">Degree level detected</p>
+                </div>`:''}
+                ${bd.resumeQuality!==undefined?`
+                <div class="p-3 rounded-xl bg-white border border-slate-200">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-xs font-semibold text-slate-600">📄 Resume Quality</span>
+                        <span class="text-xs font-bold text-rose-600">${safe(bd.resumeQuality,0)}/${safe(bd.resumeQualityMax,5)}</span>
+                    </div>
+                    <div class="w-full bg-slate-100 rounded-full h-2">
+                        <div class="bg-rose-500 h-2 rounded-full transition-all" style="width:${Math.min((safe(bd.resumeQuality,0)/safe(bd.resumeQualityMax,5))*100,100)}%"></div>
+                    </div>
+                    <p class="text-xs text-slate-400 mt-1">Resume detail & completeness</p>
+                </div>`:''}
+            </div>
+        </div>`:''}
+    </div>
+
+    <!-- TAB NAVIGATION -->
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+        <div class="border-b border-slate-200 px-2 pt-2">
+            <div class="flex gap-1 overflow-x-auto">
+                <button id="tab-btn-overview" onclick="switchTab('overview')" class="tab-btn active flex items-center gap-2 px-5 py-3 rounded-t-xl text-sm font-semibold border-b-2 border-transparent whitespace-nowrap">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+                    Overview
+                </button>
+                <button id="tab-btn-skills" onclick="switchTab('skills')" class="tab-btn flex items-center gap-2 px-5 py-3 rounded-t-xl text-sm font-semibold border-b-2 border-transparent whitespace-nowrap">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"/></svg>
+                    Skills
+                    <span class="px-2 py-0.5 rounded-full text-xs font-bold ${matchedCount===jobReqs.length?'bg-emerald-100 text-emerald-700':'bg-slate-200 text-slate-600'}">${matchedCount}/${jobReqs.length}</span>
+                </button>
+                <button id="tab-btn-learning" onclick="switchTab('learning')" class="tab-btn flex items-center gap-2 px-5 py-3 rounded-t-xl text-sm font-semibold border-b-2 border-transparent whitespace-nowrap">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
+                    Learning
+                    ${missingCount>0?`<span class="px-2 py-0.5 rounded-full text-xs font-bold bg-orange-100 text-orange-700">${missingCount}</span>`:'<span class="px-2 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-700">✓</span>'}
+                </button>
+                <button id="tab-btn-interview" onclick="switchTab('interview')" class="tab-btn flex items-center gap-2 px-5 py-3 rounded-t-xl text-sm font-semibold border-b-2 border-transparent whitespace-nowrap">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
+                    Interview
+                </button>
+                <button id="tab-btn-resources" onclick="switchTab('resources')" class="tab-btn flex items-center gap-2 px-5 py-3 rounded-t-xl text-sm font-semibold border-b-2 border-transparent whitespace-nowrap">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
+                    Resources
+                </button>
+            </div>
+        </div>
+
+        <!-- ==================== TAB 1: OVERVIEW ==================== -->
+        <div id="tab-overview" class="tab-content active p-6 md:p-8">
+            <div class="grid md:grid-cols-2 gap-6 mb-6">
+                <!-- Strengths -->
+                <div class="rounded-xl border border-slate-200 p-5">
+                    <h3 class="flex items-center gap-2 font-bold text-slate-800 mb-4">
+                        <span class="w-7 h-7 rounded-lg bg-emerald-100 flex items-center justify-center text-emerald-600 text-xs">✓</span>
+                        Strengths
+                    </h3>
+                    <div class="space-y-2">
+                        ${strengths.map(s=>`
+                        <div class="flex items-start gap-2 p-3 rounded-lg bg-emerald-50/60 border border-emerald-100">
+                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-1.5 flex-shrink-0"></span>
+                            <span class="text-sm text-slate-700">${s}</span>
+                        </div>`).join('')}
+                    </div>
+                </div>
+                <!-- Weaknesses -->
+                <div class="rounded-xl border border-slate-200 p-5">
+                    <h3 class="flex items-center gap-2 font-bold text-slate-800 mb-4">
+                        <span class="w-7 h-7 rounded-lg bg-amber-100 flex items-center justify-center text-amber-600 text-xs">↑</span>
+                        Areas to Improve
+                    </h3>
+                    <div class="space-y-2">
+                        ${weaknesses.map(w=>`
+                        <div class="flex items-start gap-2 p-3 rounded-lg bg-amber-50/60 border border-amber-100">
+                            <span class="w-1.5 h-1.5 rounded-full bg-amber-500 mt-1.5 flex-shrink-0"></span>
+                            <span class="text-sm text-slate-700">${w}</span>
+                        </div>`).join('')}
+                    </div>
+                </div>
+            </div>
+            <!-- Recommendation -->
+            ${recR?`
+            <div class="p-5 rounded-xl ${colors.light} border border-slate-200">
+                <h4 class="font-bold text-slate-800 mb-2 flex items-center gap-2">
+                    <span class="w-7 h-7 rounded-lg ${colors.bg} flex items-center justify-center text-white text-xs font-black">!</span>
+                    Hiring Recommendation
+                </h4>
+                <p class="text-sm text-slate-700">${recR}</p>
+            </div>`:''}
+        </div>
+
+        <!-- ==================== TAB 2: SKILLS ==================== -->
+        <div id="tab-skills" class="tab-content p-6 md:p-8">
+            <!-- Matched -->
+            ${matched.length>0?`
+            <div class="mb-6">
+                <h3 class="font-bold text-slate-800 mb-3 flex items-center gap-2">
+                    <span class="w-7 h-7 rounded-lg bg-emerald-100 flex items-center justify-center text-emerald-600 text-xs">✓</span>
+                    Matched Skills <span class="text-sm font-normal text-slate-400">(${matched.length})</span>
+                </h3>
+                <div class="flex flex-wrap gap-2">
+                    ${matched.map(s=>`<span class="px-4 py-2 rounded-xl bg-emerald-50 text-emerald-700 text-sm font-semibold border border-emerald-200 hover-lift cursor-default">✓ ${s}</span>`).join('')}
+                </div>
+            </div>`:''}
+            <!-- Missing -->
+            ${missing.length>0?`
+            <div>
+                <h3 class="font-bold text-slate-800 mb-3 flex items-center gap-2">
+                    <span class="w-7 h-7 rounded-lg bg-red-100 flex items-center justify-center text-red-600 text-xs">✗</span>
+                    Missing Skills <span class="text-sm font-normal text-slate-400">(${missing.length})</span>
+                </h3>
+                <div class="flex flex-wrap gap-2 mb-6">
+                    ${missing.map(s=>`<span class="px-4 py-2 rounded-xl bg-red-50 text-red-700 text-sm font-semibold border border-red-200 hover-lift cursor-default">✗ ${s}</span>`).join('')}
+                </div>
+                <!-- Skill gap details -->
+                <div class="space-y-3">
+                    ${missing.slice(0,6).map((skill,idx)=>{
+                        const a=gapArr[idx]||{};
+                        const perf=safe(a.performanceImpact,{});
+                        const career=safe(a.careerBenefits,{});
+                        const pC={'Critical':'bg-red-500','High':'bg-orange-500','Medium':'bg-amber-500'};
+                        return `
+                        <div class="rounded-xl border border-slate-200 overflow-hidden hover-lift">
+                            <div class="p-4 flex items-center gap-4">
+                                <div class="w-9 h-9 rounded-lg bg-indigo-600 text-white flex items-center justify-center font-black flex-shrink-0">${idx+1}</div>
+                                <div class="flex-1 min-w-0">
+                                    <div class="flex items-center gap-2 flex-wrap">
+                                        <span class="font-bold text-slate-800">${safe(a.displayName,skill)}</span>
+                                        <span class="px-2 py-0.5 ${pC[a.priorityLevel]||'bg-orange-500'} text-white rounded text-xs font-bold">${safe(a.priorityLevel,'High')}</span>
+                                    </div>
+                                    <p class="text-xs text-slate-500 mt-0.5">${safe(a.whyLearn, skill+' is needed for this role')}</p>
+                                </div>
+                                <div class="text-right flex-shrink-0">
+                                    <div class="text-lg font-black text-slate-800">${safe(a.importancePercentage,85)}%</div>
+                                    <div class="text-xs text-slate-400">importance</div>
+                                </div>
+                            </div>
+                            ${(perf.without||perf.with)?`
+                            <div class="px-4 pb-4 grid grid-cols-2 gap-2">
+                                <div class="p-2 rounded-lg bg-red-50 border border-red-100">
+                                    <div class="text-xs font-bold text-red-600">❌ Without</div>
+                                    <p class="text-xs text-red-700 mt-0.5">${safe(perf.without,'Limited')}</p>
+                                </div>
+                                <div class="p-2 rounded-lg bg-emerald-50 border border-emerald-100">
+                                    <div class="text-xs font-bold text-emerald-600">✅ With</div>
+                                    <p class="text-xs text-emerald-700 mt-0.5">${safe(perf.with,'Full potential')}</p>
+                                </div>
+                            </div>`:''}
+                        </div>`;
+                    }).join('')}
+                </div>
+            </div>`:`
+            <div class="text-center py-12">
+                <div class="text-5xl mb-4">🎉</div>
+                <h3 class="text-2xl font-black text-slate-800 mb-2">Perfect Skill Match!</h3>
+                <p class="text-slate-500">You have all ${jobReqs.length} required skills</p>
+            </div>`}
+        </div>
+
+        <!-- ==================== TAB 3: LEARNING ==================== -->
+        <div id="tab-learning" class="tab-content p-6 md:p-8">
+            ${missing.length>0?`
+            <!-- Learning Plan Overview -->
+            ${plan.totalTimeEstimate?`
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+                <div class="text-center p-4 rounded-xl bg-indigo-50 border border-indigo-100">
+                    <div class="text-xl font-black text-indigo-700">${safe(plan.totalTimeEstimate,'TBD')}</div>
+                    <div class="text-xs text-indigo-400 font-semibold mt-1">Total Time</div>
+                </div>
+                <div class="text-center p-4 rounded-xl bg-emerald-50 border border-emerald-100">
+                    <div class="text-xl font-black text-emerald-700">${safe(plan.weeklyCommitment,'10-15h')}</div>
+                    <div class="text-xs text-emerald-400 font-semibold mt-1">Per Week</div>
+                </div>
+                <div class="text-center p-4 rounded-xl bg-amber-50 border border-amber-100">
+                    <div class="text-xl font-black text-amber-700">${safe(plan.salaryPotential,'+$$$')}</div>
+                    <div class="text-xs text-amber-400 font-semibold mt-1">Salary Boost</div>
+                </div>
+                <div class="text-center p-4 rounded-xl bg-rose-50 border border-rose-100">
+                    <div class="text-xl font-black text-rose-700">${missing.length} skills</div>
+                    <div class="text-xs text-rose-400 font-semibold mt-1">To Learn</div>
+                </div>
+            </div>
+            ${safe(plan.milestones,[]).length>0?`
+            <div class="mb-6">
+                <h4 class="font-bold text-slate-700 mb-3 text-sm">🏁 Milestones</h4>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
+                    ${plan.milestones.map(m=>`
+                    <div class="p-3 rounded-xl bg-slate-50 border border-slate-200 text-center">
+                        <div class="text-xs font-bold text-indigo-600">Week ${safe(m.week,'?')}</div>
+                        <div class="text-xs text-slate-600 mt-1">${safe(m.goal,'')}</div>
+                    </div>`).join('')}
+                </div>
+            </div>`:''}`:''}
+
+            <!-- Per-skill learning roadmaps -->
+            <h4 class="font-bold text-slate-800 mb-4">📚 Skill Roadmaps</h4>
+            <div class="space-y-4">
+                ${missing.slice(0,6).map((skill,idx)=>{
+                    const a=gapArr[idx]||{};
+                    const res=findResource(resArr,skill);
+                    const roadmap=safe(res.roadmap,safe(a.roadmap,{}));
+                    const rmKeys=Object.keys(roadmap).filter(k=>k.startsWith('week'));
+                    const career=safe(a.careerBenefits,{});
+                    return `
+                    <div class="rounded-xl border border-slate-200 p-5">
+                        <div class="flex items-center gap-3 mb-4">
+                            <div class="w-8 h-8 rounded-lg bg-indigo-600 text-white flex items-center justify-center font-bold text-sm">${idx+1}</div>
+                            <div>
+                                <h5 class="font-bold text-slate-800">${safe(a.displayName,skill)}</h5>
+                                <div class="flex gap-2 text-xs text-slate-400 mt-0.5">
+                                    <span>⏱ ${safe(a.learningTime,safe(res.learningTime,'4-6 wks'))}</span>
+                                    <span>📊 ${safe(a.difficulty,safe(res.difficulty,'Medium'))}</span>
+                                    <span>💰 ${safe(a.salaryImpact,safe(res.salaryImpact,'+$10K'))}</span>
+                                </div>
+                            </div>
+                        </div>
+                        ${rmKeys.length>0?`
+                        <div class="grid md:grid-cols-3 gap-2 mb-3">
+                            ${rmKeys.slice(0,6).map(k=>`
+                            <div class="p-3 rounded-lg bg-orange-50 border border-orange-100">
+                                <div class="text-xs font-bold text-orange-600">${k.replace('week','Week ').replace('_','-')}</div>
+                                <div class="text-xs text-slate-600 mt-1">${roadmap[k]}</div>
+                            </div>`).join('')}
+                        </div>`:''}
+                        ${career.salary?`
+                        <div class="p-3 rounded-lg bg-yellow-50 border border-yellow-200">
+                            <span class="text-xs font-bold text-yellow-800">💰 Salary impact: </span>
+                            <span class="text-xs text-yellow-700">${career.salary}</span>
+                        </div>`:''}
+                    </div>`;
+                }).join('')}
+            </div>
+            `:`
+            <div class="text-center py-12">
+                <div class="text-5xl mb-4">🏆</div>
+                <h3 class="text-2xl font-black text-slate-800 mb-2">No Learning Needed!</h3>
+                <p class="text-slate-500">You already have all required skills. Focus on interview prep!</p>
+            </div>`}
+        </div>
+
+        <!-- ==================== TAB 4: INTERVIEW ==================== -->
+        <div id="tab-interview" class="tab-content p-6 md:p-8">
+            ${tips.length>0?`
+            <h3 class="font-bold text-slate-800 mb-4 flex items-center gap-2">
+                <span class="w-7 h-7 rounded-lg bg-blue-100 flex items-center justify-center text-blue-600 text-xs">🎯</span>
+                Interview Preparation Tips
+            </h3>
+            <div class="space-y-3 mb-8">
+                ${tips.map((t,i)=>`
+                <div class="flex items-start gap-4 p-4 rounded-xl bg-blue-50/50 border border-blue-100">
+                    <span class="w-8 h-8 rounded-full bg-blue-200 text-blue-700 flex items-center justify-center text-sm font-bold flex-shrink-0">${i+1}</span>
+                    <span class="text-sm text-slate-700 pt-1">${t}</span>
+                </div>`).join('')}
+            </div>`:''}
+
+            <!-- Quick prep checklist -->
+            <div class="grid md:grid-cols-2 gap-4">
+                <div class="rounded-xl border border-slate-200 p-5">
+                    <h4 class="font-bold text-slate-800 mb-3 text-sm">✅ Before Interview</h4>
+                    <div class="space-y-2 text-sm text-slate-600">
+                        <div class="flex items-center gap-2"><input type="checkbox" class="rounded border-slate-300"> Research ${company||'the company'} culture & values</div>
+                        <div class="flex items-center gap-2"><input type="checkbox" class="rounded border-slate-300"> Prepare 3 STAR method stories</div>
+                        <div class="flex items-center gap-2"><input type="checkbox" class="rounded border-slate-300"> Review your matched skills: ${matched.slice(0,3).join(', ')}</div>
+                        <div class="flex items-center gap-2"><input type="checkbox" class="rounded border-slate-300"> Practice common behavioral questions</div>
+                        <div class="flex items-center gap-2"><input type="checkbox" class="rounded border-slate-300"> Prepare questions to ask interviewer</div>
+                    </div>
+                </div>
+                <div class="rounded-xl border border-slate-200 p-5">
+                    <h4 class="font-bold text-slate-800 mb-3 text-sm">💡 Key Talking Points</h4>
+                    <div class="space-y-2 text-sm">
+                        ${matched.slice(0,4).map(s=>`
+                        <div class="p-2 rounded-lg bg-emerald-50 border border-emerald-100 text-emerald-700">
+                            <span class="font-semibold">✓ ${s}:</span> Prepare a specific project example
+                        </div>`).join('')}
+                        ${missing.slice(0,2).map(s=>`
+                        <div class="p-2 rounded-lg bg-amber-50 border border-amber-100 text-amber-700">
+                            <span class="font-semibold">↑ ${s}:</span> Show willingness to learn quickly
+                        </div>`).join('')}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== TAB 5: RESOURCES ==================== -->
+        <div id="tab-resources" class="tab-content p-6 md:p-8">
+            ${missing.length>0?`
+            <div class="space-y-8">
+                ${missing.slice(0,6).map((skill,idx)=>{
+                    const a=gapArr[idx]||{};
+                    const res=findResource(resArr,skill);
+                    const courses=safe(res.courses,safe(a.topCourses,[]));
+                    const videos=safe(res.youtubeVideos,safe(a.topVideos,[]));
+                    const practice=safe(res.practiceResources,safe(a.topPractice,[]));
+                    const projects=safe(res.projects,safe(a.topProjects,[]));
+                    const certs=safe(res.certifications,safe(a.certifications,[]));
+                    return `
+                    <div>
+                        <div class="flex items-center gap-3 mb-4">
+                            <div class="w-9 h-9 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-black">${idx+1}</div>
+                            <div>
+                                <h4 class="font-bold text-slate-800 text-lg">${safe(a.displayName,skill)}</h4>
+                                <p class="text-xs text-slate-400">${safe(a.learningTime,safe(res.learningTime,'4-6 weeks'))} • ${safe(a.difficulty,safe(res.difficulty,'Medium'))}</p>
+                            </div>
+                        </div>
+
+                        <!-- Courses -->
+                        ${courses.length>0?`
+                        <div class="mb-4">
+                            <h5 class="text-sm font-bold text-slate-700 mb-2">🎓 Free Courses</h5>
+                            <div class="grid md:grid-cols-2 gap-2">
+                                ${courses.slice(0,4).map(c=>`
+                                <a href="${safe(c.link,'#')}" target="_blank" rel="noopener noreferrer"
+                                   class="p-3 rounded-xl bg-emerald-50 border border-emerald-200 hover:border-emerald-400 hover:shadow-md transition-all block group">
+                                    <div class="flex justify-between items-start mb-1">
+                                        <span class="text-sm font-bold text-emerald-700">${safe(c.platform,'')}</span>
+                                        <span class="text-xs bg-emerald-200 text-emerald-800 px-2 py-0.5 rounded font-bold">FREE</span>
+                                    </div>
+                                    <div class="text-xs text-slate-600 mb-1">${safe(c.courseName,'Course')}</div>
+                                    <div class="flex justify-between text-xs text-slate-400">
+                                        <span>⏱ ${safe(c.duration,'')}</span>
+                                        <span>${safe(c.level,'')}</span>
+                                    </div>
+                                    ${c.rating?`<div class="text-xs text-yellow-600 mt-1">⭐ ${c.rating}</div>`:''}
+                                    <div class="text-xs font-semibold text-emerald-600 mt-2 group-hover:text-emerald-700">→ Start Learning</div>
+                                </a>`).join('')}
+                            </div>
+                        </div>`:''}
+
+                        <!-- YouTube -->
+                        ${videos.length>0?`
+                        <div class="mb-4">
+                            <h5 class="text-sm font-bold text-slate-700 mb-2">📺 YouTube Videos</h5>
+                            <div class="grid md:grid-cols-3 gap-2">
+                                ${videos.slice(0,3).map(v=>`
+                                <a href="${safe(v.link,'#')}" target="_blank" rel="noopener noreferrer"
+                                   class="p-3 rounded-xl bg-red-50 border border-red-200 hover:border-red-400 hover:shadow-md transition-all block group">
+                                    <div class="flex items-center gap-2 mb-1">
+                                        <span class="bg-red-600 text-white px-1.5 py-0.5 rounded text-xs font-bold">▶</span>
+                                        <span class="text-xs text-slate-400">${safe(v.subscribers,'')}</span>
+                                    </div>
+                                    <div class="text-sm font-bold text-slate-700">${safe(v.channelName,'')}</div>
+                                    <div class="text-xs text-slate-500 mt-0.5">${safe(v.videoTitle,'')}</div>
+                                    ${v.duration?`<div class="text-xs text-slate-400 mt-1">⏱ ${v.duration}</div>`:''}
+                                </a>`).join('')}
+                            </div>
+                        </div>`:''}
+
+                        <!-- Practice & Projects -->
+                        <div class="grid md:grid-cols-2 gap-4 mb-4">
+                            ${practice.length>0?`
+                            <div>
+                                <h5 class="text-sm font-bold text-slate-700 mb-2">🏋️ Practice</h5>
+                                <div class="space-y-2">
+                                    ${practice.slice(0,3).map(s=>`
+                                    <a href="${safe(s.link,'#')}" target="_blank" rel="noopener noreferrer"
+                                       class="p-3 rounded-xl bg-purple-50 border border-purple-100 hover:border-purple-300 transition-all block">
+                                        <div class="text-sm font-semibold text-purple-700">${safe(s.platform,'')}</div>
+                                        <div class="text-xs text-slate-500">${safe(s.description,'')}</div>
+                                    </a>`).join('')}
+                                </div>
+                            </div>`:''}
+                            ${projects.length>0?`
+                            <div>
+                                <h5 class="text-sm font-bold text-slate-700 mb-2">💡 Projects</h5>
+                                <div class="space-y-2">
+                                    ${projects.slice(0,3).map(p=>`
+                                    <div class="p-3 rounded-xl bg-blue-50 border border-blue-100">
+                                        <div class="flex justify-between items-start">
+                                            <span class="text-sm font-semibold text-blue-700">${safe(p.projectName,'Project')}</span>
+                                            <span class="text-xs bg-blue-200 text-blue-700 px-2 py-0.5 rounded">${safe(p.difficulty,'')}</span>
+                                        </div>
+                                        <div class="text-xs text-slate-500 mt-1">${safe(p.description,'')}</div>
+                                        ${p.whatYouLearn?`<div class="text-xs text-emerald-600 mt-1">📚 ${p.whatYouLearn}</div>`:''}
+                                        ${safe(p.skills,[]).length>0?`
+                                        <div class="flex flex-wrap gap-1 mt-2">
+                                            ${p.skills.map(s=>`<span class="text-xs bg-blue-100 text-blue-600 px-2 py-0.5 rounded">${s}</span>`).join('')}
+                                        </div>`:''}
+                                    </div>`).join('')}
+                                </div>
+                            </div>`:''}
+                        </div>
+
+                        <!-- Certs -->
+                        ${certs.length>0?`
+                        <div>
+                            <h5 class="text-sm font-bold text-slate-700 mb-2">🏅 Certifications</h5>
+                            <div class="grid md:grid-cols-2 gap-2">
+                                ${certs.map(c=>`
+                                <a href="${safe(c.link,'#')}" target="_blank" rel="noopener noreferrer"
+                                   class="p-3 rounded-xl bg-yellow-50 border border-yellow-200 hover:border-yellow-300 transition-all block">
+                                    <div class="text-sm font-semibold text-yellow-800">${safe(c.name,'')}</div>
+                                    <div class="text-xs text-slate-500">${safe(c.provider,'')} • ${safe(c.duration,'')}</div>
+                                    <div class="text-xs font-bold mt-1 ${(c.cost&&c.cost.includes('Free'))?'text-emerald-600':'text-orange-600'}">${safe(c.cost,'')}</div>
+                                </a>`).join('')}
+                            </div>
+                        </div>`:''}
+
+                        ${idx<missing.length-1?'<hr class="border-slate-200 mt-6">':''}
+                    </div>`;
+                }).join('')}
+            </div>
+            `:`
+            <div class="text-center py-12">
+                <div class="text-5xl mb-4">🏆</div>
+                <h3 class="text-2xl font-black text-slate-800 mb-2">All Skills Covered!</h3>
+                <p class="text-slate-500">No additional resources needed. You're ready to apply!</p>
+            </div>`}
+        </div>
+    </div>`;
+
+    section.classList.remove('hidden');
+    section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+</script>
+</body>
+</html>
